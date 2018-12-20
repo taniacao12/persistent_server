@@ -20,21 +20,17 @@ int server_handshake(int *to_client) {
     // receive message
     char msg[HANDSHAKE_BUFFER_SIZE];
     int r = read(receive, msg, HANDSHAKE_BUFFER_SIZE);
-    printf("CLIENT MESSAGE: %s\n", msg);
+    printf("RECIEVED MESSAGE FROM CLIENT\nCLIENT MESSAGE: %s\n", msg);
     // remove well known pipe
     remove("main");
     printf("REMOVED WELL KNOWN PIPE\n");
-
-    while (1) {
-      // connect to private FIFO
-      *to_client = open(msg, O_WRONLY);
-      // send initial message
-      int w = write(*to_client, "hello", HANDSHAKE_BUFFER_SIZE);
-      
-      // get response from client
-      r = read(receive, msg, HANDSHAKE_BUFFER_SIZE);
-      printf("CLIENT MESSAGE: %s\n", msg);
-    }
+    // connect to private FIFO
+    *to_client = open(msg, O_WRONLY);
+    // send initial message
+    int w = write(*to_client, ACK, HANDSHAKE_BUFFER_SIZE);
+    // get response from client
+    r = read(receive, msg, HANDSHAKE_BUFFER_SIZE);
+    printf("RECIEVED MESSAGE FROM CLIENT\nCLIENT MESSAGE: %s\n", msg);
     // return fd to wkp
     printf("3 WAY HANDSHAKE COMPLETE\n");
     return receive;
@@ -69,14 +65,12 @@ int client_handshake(int *to_server) {
     // receive server message
     char msg[HANDSHAKE_BUFFER_SIZE];
     int r = read(receive, msg, HANDSHAKE_BUFFER_SIZE);
-    printf("RECIEVED MESSAGE FROM SERVER\nSERVER MESSAGE: %s\n", msg);
+    printf("RECIEVED MESSAGE FROM SERVER\SERVER MESSAGE: %s\n", msg);
     // remove private FIFO
     remove(pipe_name);
     printf("REMOVED PRIVATE PIPE\n");
-    while (1) {
-      // send response to server
-      w = write(*to_server, "annyeong", HANDSHAKE_BUFFER_SIZE);
-      // return fd to private fifo
-    }
+    // send response to server
+    w = write(*to_server, ACK, HANDSHAKE_BUFFER_SIZE);
+    // return fd to private fifo
     return receive;
 }
