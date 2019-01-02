@@ -10,36 +10,17 @@
 
   returns the file descriptor for the upstream pipe.
   =========================*/
-int server_handshake(int *to_client) {
-    // create well known pipe
-    int wkp = mkfifo("main", 0644);
-    if (wkp == - 1) {
-        printf("error %d: %s\n", errno, strerror(errno));
-        return 1;
-    }
-    else printf("CREATED WELL KNOWN PIPE\n");
-    // wait
-    int read_end = open("main", O_RDONLY);
-    // receive message
-    char msg[HANDSHAKE_BUFFER_SIZE];
-    int r = read(read_end, msg, HANDSHAKE_BUFFER_SIZE);
-    printf("CLIENT MESSAGE: %s\n", msg);
-    // remove well known pipe
-    remove("main");
-    printf("REMOVED WELL KNOWN PIPE\n");
-    // connect to private fifo
+void server_handshake(int from_client, int *to_client, char *msg) {
+    // connect to private FIFO
     *to_client = open(msg, O_WRONLY);
     // send initial message
-    int w = write(*to_client, msg, HANDSHAKE_BUFFER_SIZE);
+    write(*to_client, msg, HANDSHAKE_BUFFER_SIZE);
     // get response from client
-    r = read(read_end, msg, HANDSHAKE_BUFFER_SIZE);
-    printf("CLIENT MESSAGE: %s\n", msg);
-    // return fd to well known pipe
-    printf("COMPLETED HANDSHAKE\n");
-    printf("-------------------------\n");
-    return read_end;
+    read(from_client, msg, HANDSHAKE_BUFFER_SIZE);
+    printf("[SUBSERVER %d] CLIENT MESSAGE:[%s]\n", getpid(), msg);
+    // return file descriptor to well known pipe
+    printf("[SUBSERVER %d] HANDSHAKE COMPLETE\n", getpid());
 }
-
 
 /*=========================
   client_handshake
@@ -56,31 +37,31 @@ int client_handshake(int *to_server) {
     sprintf(pipe_name, "%d", getpid());
     int private = mkfifo(pipe_name, 0644);
     if (private == - 1) {
-        printf("error %d: %s\n", errno, strerror(errno));
+        printf("ERROR: %d --> %s\n", errno, strerror(errno));
         return 1;
     }
-    printf("CREATED PRIVATE PIPE\n");
-    // set to_server to well known pipe
+    printf("[CLIENT] CREATED PRIVATE PIPE\n");
+    // set to_server to wwll known pipe
     *to_server = open("main", O_WRONLY);
     if (*to_server == - 1) {
-        printf("error %d: %s\n", errno, strerror(errno));
+        printf("ERROR: %d --> %s\n", errno, strerror(errno));
         remove(pipe_name);
         return 1;
     }
-    // sends private FIFO name to server
+    // send private FIFO name to server
     int w = write(*to_server, pipe_name, HANDSHAKE_BUFFER_SIZE);
-    printf("SENT PRIVATE PIPE NAME\n");
+    printf("[CLIENT] SENT PRIVATE PIPE NAME TO SERVER\n");
     // wait for response
-    int read_end = open(pipe_name, O_RDONLY);
+    int receive = open(pipe_name, O_RDONLY);
     // receive server message
     char msg[HANDSHAKE_BUFFER_SIZE];
-    int r = read(read_end, msg, HANDSHAKE_BUFFER_SIZE);
-    printf("SERVER MESSAGE: %s\n", msg);
+    int r = read(receive, msg, HANDSHAKE_BUFFER_SIZE);
+    printf("[CLIENT] SERVER MESSAGE: %s\n", msg);
     // remove private FIFO
     remove(pipe_name);
-    printf("REMOVED PRIVATE PIPE\n");
+    printf("[CLIENT] REMOVED PRIVATE PIPE\n");
     // send response to server
     w = write(*to_server, ACK, HANDSHAKE_BUFFER_SIZE);
-    // return fd to private fifo
-    return read_end;
+    // return file descriptor to private FIFO
+    return receive;
 }

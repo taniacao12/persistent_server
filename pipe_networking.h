@@ -17,11 +17,7 @@
 #define BUFFER_SIZE 1000
 
 static void sighandler(int signo);
-
-int server_handshake(int *to_client);
-
+void server_handshake(int from_client, int *to_client, char *msg);
 int client_handshake(int *to_server);
-
-void to_upper(char * data);
 
 #endif
